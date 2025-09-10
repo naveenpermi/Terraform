@@ -1,56 +1,9 @@
-pipeline {
-    agent any
-    parameters {
-        string(name: 'FILENAME', defaultValue: 'animals.txt', description: 'Name of the file to create')
-        string(name: 'CONTENT', defaultValue: 'some animals are human friendly', description: 'Content of the file')
-    }
-    environment {
-        SLACK_CHANNEL = '#jenkins-integration'   // replace with your channel
-        SLACK_CREDENTIALS = 'slack-notification'   // Jenkins credential ID for Slack token
-    }
-    stages {
-        stage('Checkout SCM') {
-            steps {
-                git branch: 'main', url: 'https://github.com/naveenpermi/Terraform'
-            }
-        }
-        stage('Terraform Init') {
-            steps {
-                sh 'terraform init'
-            }
-        }
-        stage('Terraform Plan') {
-            steps {
-                sh """
-                terraform plan -out=tfplan \
-                  -var="filename=${params.FILENAME}" \
-                  -var="content=${params.CONTENT}"
-                """
-            }
-        }
-        stage('Terraform Apply') {
-            steps {
-                input message: ":warning: Do you want to apply Terraform changes?"
-                sh 'terraform apply -auto-approve tfplan'
-            }
-        }
-    }
-    post {
-        success {
-            echo ":white_check_mark: Terraform executed successfully. File: ${params.FILENAME}"
-            slackSend (
-                channel: "${env.SLACK_CHANNEL}",
-                color: '#36A64F',
-              message: ":white_check_mark: Terraform executed successfully!\n*File:* ${params.FILENAME}\n*Content:* ${params.CONTENT} (By Naveen)"
-            )
-        }
-        failure {
-            echo ":x: Terraform pipeline failed!"
-            slackSend (
-                channel: "${env.SLACK_CHANNEL}",
-                color: '#FF0000',
-                message: ":x: Terraform pipeline failed!"
-            )
-        }
-    }
-}  
+variable "filename" {
+  description = "animals"
+  type        = string
+}
+
+variable "content" {
+  description = "Some animals are human friendly"
+  type        = string
+}
