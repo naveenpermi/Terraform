@@ -1,9 +1,9 @@
 variable "filename" {
-  description = "animals"
+  description = "The name of the file to create"
   type        = string
 }
 
 variable "content" {
-  description = "Some animals are human friendly"
+  description = "The content to put inside the file"
   type        = string
 }
