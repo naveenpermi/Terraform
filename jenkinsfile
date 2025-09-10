@@ -1,43 +1,57 @@
 pipeline {
     agent any
-
-    environment {
-        AWS_ACCESS_KEY_ID     = credentials('Access_key')
-        AWS_SECRET_ACCESS_KEY = credentials('secret_key')
+    parameters {
+        string(name: 'FILENAME', defaultValue: 'animals.txt', description: 'Name of the file to create')
+        string(name: 'CONTENT', defaultValue: 'some animals are human friendly', description: 'Content of the file')
     }
-
+    environment {
+        SLACK_CHANNEL = '#jenkins-integration'   // replace with your channel
+        SLACK_CREDENTIALS = 'slack-notification'   // Jenkins credential ID for Slack token
+    }
     stages {
-        stage('Checkout Code') {
+        stage('Checkout SCM') {
             steps {
-                git url: 'https://github.com/naveenpermi/terraform.git', branch: 'main'
+                git branch: 'main', url: 'https://github.com/naveenpermi/Terraform'
             }
         }
-
         stage('Terraform Init') {
             steps {
                 sh 'terraform init'
             }
         }
-
         stage('Terraform Plan') {
             steps {
-                sh '''
-                    terraform plan \
-                      -var "filename=example.txt" \
-                      -var "content=Hello from Jenkins Pipeline"
-                '''
+                sh """
+                terraform plan -out=tfplan \
+                  -var="filename=${params.FILENAME}" \
+                  -var="content=${params.CONTENT}"
+                """
             }
         }
-
         stage('Terraform Apply') {
             steps {
-                sh '''
-                    terraform apply -auto-approve \
-                      -var "filename=example.txt" \
-                      -var "content=Hello from Jenkins Pipeline"
-                '''
+                input message: ":warning: Do you want to apply Terraform changes?"
+                sh 'terraform apply -auto-approve tfplan'
             }
         }
     }
-}
+    post {
+        success {
+            echo ":white_check_mark: Terraform executed successfully. File: ${params.FILENAME}"
+            slackSend (
+                channel: "${env.SLACK_CHANNEL}",
+                color: '#36A64F',
+              message: ":white_check_mark: Terraform executed successfully!\n*File:* ${params.FILENAME}\n*Content:* ${params.CONTENT} (By Naveen)"
+            )
+        }
+        failure {
+            echo ":x: Terraform pipeline failed!"
+            slackSend (
+                channel: "${env.SLACK_CHANNEL}",
+                color: '#FF0000',
+                message: ":x: Terraform pipeline failed!"
+            )
+        }
+    }
+}  
 
