@@ -1,7 +1,3 @@
-variable "filename" {
- 
-}
-
-variable "content" {
- 
-}
+variable "filename" {}
+variable "content" {}
+variable "prefix" {}
