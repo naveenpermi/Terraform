@@ -1,30 +1,29 @@
 pipeline {
-  agent any
-  stages {
-    stage('Checkout') {
-      steps {
-        git url: 'https://github.com/naveenpermi/Terraform.git', branch: 'main'
-      }
+    agent any
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('Access_Key')
+        AWS_SECRET_ACCESS_KEY = credentials('Secret_key')
     }
-    stage('Terraform Init') {
-      steps {
-        sh 'terraform init -input=false'
-      }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git url: 'https://github.com/naveenpermi/Terraform.git', branch: 'main'
+            }
+        }
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        stage('Terraform Plan') {
+            steps {
+                 sh 'terraform plan -var-file=environment.tfvars'
+            }
+        }
+        stage('Terraform Apply') {
+            steps {
+               sh 'terraform apply -var-file=environment.tfvars -auto-approve'
+            }
+        }
     }
-    stage('Terraform Plan') {
-      steps {
-        sh 'terraform plan -no-color -out=tfplan'
-      }
-    }
-    stage('Approve') {
-      steps {
-        input message: 'Do you want to apply Terraform changes?'
-      }
-    }
-    stage('Terraform Apply') {
-      steps {
-        sh 'terraform apply -auto-approve tfplan'
-      }
-    }
-  }
 }
