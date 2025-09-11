@@ -1,35 +1,30 @@
 pipeline {
-    agent any
-    environment {
-        TFVARS = 'environment.tfvars'   // change only here if you rename file
+  agent any
+  stages {
+    stage('Checkout') {
+      steps {
+        git url: 'https://github.com/naveenpermi.git', branch: 'main'
+      }
     }
-    stages {
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main', url: 'https://github.com/naveenpermi/Terraform.git'
-            }
-        }
-        stage('Terraform Init') {
-            steps {
-                sh 'terraform init'
-            }
-        }
-        stage('Terraform Plan') {
-            steps {
-                 sh 'terraform plan -var-file=environment.tfvars'
+    stage('Terraform Init') {
+      steps {
+        sh 'terraform init -input=false'
+      }
     }
+    stage('Terraform Plan') {
+      steps {
+        sh 'terraform plan -no-color -out=tfplan'
+      }
+    }
+    stage('Approve') {
+      steps {
+        input message: 'Do you want to apply Terraform changes?'
+      }
+    }
+    stage('Terraform Apply') {
+      steps {
+        sh 'terraform apply -auto-approve tfplan'
+      }
+    }
+  }
 }
-        stage('Terraform Apply') {
-            steps {
-                script {
-                    if (fileExists(env.TFVARS)) {
-                        sh "terraform apply -auto-approve -var-file=${env.TFVARS}"
-                    } else {
-                        sh "terraform apply -auto-approve"
-                    }
-                }
-            }
-        }
-    }
-}
-
