@@ -1,20 +1,19 @@
-resource "aws_iam_user" "user" {
-  name = var.username
-  tags = {
-    Description = "Created by Jenkins/Terraform"
+terraform {
+  required_providers {
+    local = {
+      source  = "hashicorp/local"
+      version = "2.3.0"
+    }
   }
 }
 
-resource "aws_iam_policy" "admin_policy" {
-  name   = "${var.username}-policy"
-  policy = file("${path.module}/admin-policy.json")
+variable "filename" {
+  type    = list(string)
+  default = ["file1.txt", "file2.txt", "file3.txt"]
 }
 
-resource "aws_iam_user_policy_attachment" "user_attach" {
-  user       = aws_iam_user.user.name
-  policy_arn = aws_iam_policy.admin_policy.arn
-}
-
-output "iam_username" {
-  value = aws_iam_user.user.name
+resource "local_file" "pet" {
+  for_each = toset(var.filename)
+  filename = each.value
+  content  = "Hello Terraform"
 }
