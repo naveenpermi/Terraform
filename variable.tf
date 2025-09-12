@@ -1,6 +1,7 @@
-variable "username" {
-  description = "IAM username to create"
-  type        = string
-  default     = "lucy"
+variable "filename" {
+  default = [
+    "pets.txt",
+    "cats.txt",
+    "dogs.txt"
+  ]
 }
-
