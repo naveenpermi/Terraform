@@ -1,3 +1,2 @@
-filename = "apple.txt"
-content  = "royal gala is one type of apple"
-
+filename ="Iteam.txt"
+content="devops"
