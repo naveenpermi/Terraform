@@ -1,75 +1,32 @@
 pipeline {
-  agent any
-
-  parameters {
-    string(name: 'IAM_USERNAME', defaultValue: 'lucy', description: 'IAM user name to create')
-    string(name: 'AWS_REGION', defaultValue: 'us-east-1', description: 'AWS region')
-  }
-
-  environment {
-    TF_IN_AUTOMATION = '1'
-    POLICY_NAME = 'AdminUsers'   // adjust based on your terraform config
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-        sh 'ls -la'
-      }
+    agent any
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('Access_Key')
+        AWS_SECRET_ACCESS_KEY = credentials('Secret_key')
     }
-
-    stage('Prepare Terraform') {
-      steps {
-        sh 'terraform -version || true'
-      }
-    }
-
-    stage('Terraform Init & Plan') {
-      steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-          sh '''
-            export AWS_REGION=${AWS_REGION}
-            export AWS_DEFAULT_REGION=${AWS_REGION}
-            terraform init -input=false
-            terraform validate
-            terraform plan -out=tfplan -var "username=${IAM_USERNAME}"
-          '''
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git url: 'https://github.com/naveenpermi/Terraform.git', branch: 'main'
+            }
         }
-      }
-    }
-
-    stage('Approve Apply') {
-      steps {
-        input message: "Apply terraform changes to create IAM user ${params.IAM_USERNAME}?"
-      }
-    }
-
-    stage('Terraform Apply') {
-      steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-          sh '''
-            export AWS_REGION=${AWS_REGION}
-            export AWS_DEFAULT_REGION=${AWS_REGION}
-            terraform apply -auto-approve tfplan || terraform apply -auto-approve -var "username=${IAM_USERNAME}"
-          '''
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init -upgrade'
+            }
         }
-      }
+        stage('Terraform Plan') {
+            steps {
+                sh 'terraform plan -var-file=environment.tfvars -out=tfplan'
+            }
+        }
+        stage('Terraform Apply') {
+            when {
+                branch 'main'   // only apply in main branch
+            }
+            steps {
+                sh 'terraform apply -auto-approve tfplan'
+            }
+        }
     }
-  }
-
-  post {
-    success {
-      slackSend (
-        channel: '#jenkins-integration',
-        message: "✅  AWS IAM User *${params.IAM_USERNAME}* created with policy *${env.POLICY_NAME}* in region *${params.AWS_REGION}*  by Naveen"
-      )
-    }
-    failure {
-      slackSend (
-        channel: '#jenkins-integration',
-        message: "❌ Terraform failed for IAM User *${params.IAM_USERNAME}* in region *${params.AWS_REGION}*. Check Jenkins logs."
-      )
-    }
-  }
 }
